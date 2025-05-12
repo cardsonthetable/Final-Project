@@ -1,0 +1,176 @@
+---
+title: "AML Final Project"
+author: "Isaac Stiepleman"
+date: "2025-05-10"
+output: pdf_document
+---
+
+```{r}
+#Libraries
+library(tidyverse)
+library(readr)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(caret)
+
+#Datasets
+election_24 <- read_csv("20241105_allcounties.csv")
+demographic <- read_excel("~/Documents/ofm_pop_sade_county_2020_2024.xlsx", 
+                          sheet = "Total")
+```
+
+#Build 2024 vote/demographic data
+
+```{r}
+#Vote data
+demvote_24 <- election_24 |>
+  filter(grepl("Democrat", Party, ignore.case = TRUE)) |>
+  group_by(County) |>
+  summarise(dem_votes = sum(Votes))
+
+vote_24 <- election_24 |>
+  filter(!is.na(Party)) |>
+  group_by(County) |>
+  summarise(total_votes = sum(Votes))
+
+votedata_24 <- left_join(demvote_24, vote_24, by = "County") |>
+  mutate(dem_share = dem_votes / total_votes)
+
+#Demographic Data
+population_totals <- demographic |> 
+  rename(County = `Area Name`) |>
+  filter(County != "Washington", Year == 2024, `Age Group` == "Total") |> 
+  select(County, Total)
+
+biodata_24 <- demographic |>
+  rename(County = `Area Name`) |>
+  filter(County != "Washington" & Year == 2024) |>
+  filter(`Age Group` != "Total") |>
+  pivot_longer(cols = -c(County, `Area ID`, Year, `Age Group`),
+               names_to = "Demo",
+               values_to = "Count") |>
+  unite("ColName", `Age Group`, Demo, sep = "_") |>
+  pivot_wider(names_from = ColName,
+              values_from = Count) |>
+  select(-contains("Total"), -`Area ID`, -Year) |>
+  left_join(population_totals, by = "County") |>
+  mutate(across(-County, as.numeric)) |>
+  mutate(across(-c(County, Total), ~ .x / Total))
+
+#Merge
+modeldata_24 <- left_join(votedata_24, biodata_24, by = "County")
+```
+
+#Data Visualization
+
+```{r}
+#Missingness Summary
+missing_summary <- modeldata_24 %>%
+  summarise(across(everything(), ~ sum(is.na(.)) / n(), .names = "{col}")) %>%
+  pivot_longer(everything(), names_to = "feature", values_to = "pct_missing")
+
+sum(missing_summary$pct_missing)
+
+#Histogram of top 8 features
+top_features <- modeldata_24 %>%
+  select(-c(1:4, 257)) |>
+  summarise(across(everything(), var)) %>%
+  pivot_longer(everything(), names_to = "feature", values_to = "variance") %>%
+  arrange(desc(variance)) %>%
+  slice_head(n = 8) %>%
+  pull(feature)
+
+modeldata_24 %>%
+  select(all_of(top_features)) %>%
+  pivot_longer(everything(), names_to = "feature", values_to = "value") %>%
+  ggplot(aes(x = value)) +
+    geom_histogram(bins = 30) +
+    facet_wrap(~ feature, scales = "free", ncol = 2) +
+    theme_minimal()
+```
+
+#Baseline model
+
+```{r}
+#Predict mean dem_share
+mean_demshare <- mean(modeldata_24$dem_share)
+baseline <- rep(mean_demshare, nrow(modeldata_24))
+
+#Metrics
+sse <- sum((modeldata_24$dem_share - baseline)^2)
+sst <- sum((modeldata_24$dem_share - mean_demshare)^2)
+
+r2 <- 1 - sse / sst; r2
+rmse <- sqrt(mean((modeldata_24$dem_share - baseline)^2)); rmse
+```
+
+#Fit k-means clusters on election data
+
+```{r}
+set.seed(2)
+
+#Test k from 1 to 20
+scaled_24 <- scale(modeldata_24 |> select(-c(1:4)))
+ratio <- numeric(20)
+
+for (k in 1:20) {
+  km <- kmeans(scaled_24, centers = k)
+  ratio[k] <- km$betweenss / km$tot.withinss
+}
+
+results <- data.frame(k = 1:20, Ratio = ratio)
+
+ggplot(results, aes(x = k, y = Ratio)) +
+  geom_line() +
+  labs(title = "Ratio (BetweenSS / Total WithinSS) by Clusters") +
+  scale_x_continuous(breaks = 1:20) +
+  theme_minimal()
+
+#I choose k = 7 because that's where the ratio starts to plateau
+#After k = 14 it jumps around due to overfitting
+
+km <- kmeans(scaled_24, centers = 7)
+modeldata_24$cluster <- km$cluster
+
+ggplot(modeldata_24, aes(x = factor(cluster), y = dem_share)) +
+  geom_boxplot(fill = "steelblue") +
+  labs(title = "Democratic Vote Share by Cluster",
+       x = "Cluster", y = "Democratic Vote Share") +
+  theme_minimal()
+```
+
+#Evaluation (PCA + OLS)
+
+```{r}
+pca <- prcomp(scaled_24)
+
+modeldata_24$pca1 <- pca$x[,1]
+modeldata_24$pca2 <- pca$x[,2]
+
+ggplot(modeldata_24, aes(x = pca1, y = pca2, color = factor(cluster))) +
+  geom_point(size = 3) +
+  labs(title = "PCA Biplot",
+       x = "PC1", y = "PC2", color = "Cluster") +
+  theme_minimal()
+
+cumul_var <- cumsum((pca$sdev^2) / sum(pca$sdev^2))
+k <- which(cumul_var > 0.9)[1]
+pca_data <- data.frame(pca$x[, 1:k])
+
+ols <- lm(modeldata_24$dem_share ~ ., data = pca_data)
+summary(ols)
+```
+
+#Cross-Validation
+
+```{r}
+set.seed(123)  
+cv_ctrl <- trainControl(method = "cv", number = 5)
+
+pca_formula <- dem_share ~ pca1 + pca2
+
+lm_cv <- train(pca_formula, data = modeldata_24, method = "lm", 
+               trControl = cv_ctrl, metric = "RMSE")
+summary(lm_cv)
+```
