@@ -138,11 +138,20 @@ ggplot(modeldata_24, aes(x = factor(cluster), y = dem_share)) +
   labs(title = "Democratic Vote Share by Cluster",
        x = "Cluster", y = "Democratic Vote Share") +
   theme_minimal()
+
+#Cluster Summary
+cluster_summary <- modeldata_24 %>%
+  group_by(cluster) %>%
+  summarise(across(matches("^[0-9]"), ~ mean(.)),
+            mean_dem_share = mean(dem_share))
+
+print(cluster_summary)
 ```
 
 #Evaluation (PCA + OLS)
 
 ```{r}
+#PCA
 pca <- prcomp(scaled_24)
 
 modeldata_24$pca1 <- pca$x[,1]
@@ -154,6 +163,11 @@ ggplot(modeldata_24, aes(x = pca1, y = pca2, color = factor(cluster))) +
        x = "PC1", y = "PC2", color = "Cluster") +
   theme_minimal()
 
+#Inspect Loadings
+pca_loadings <- pca$rotation[, 1:2]
+print(pca_loadings)
+
+#OLS
 cumul_var <- cumsum((pca$sdev^2) / sum(pca$sdev^2))
 k <- which(cumul_var > 0.9)[1]
 pca_data <- data.frame(pca$x[, 1:k])
