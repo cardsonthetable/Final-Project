@@ -1,2 +1,111 @@
-Write Up
+Washington State Democratic Turnout: Machine Learning Analysis
+
+
+Abstract
+This project analyzes county-level demographic and electoral data from Washington State to predict Democratic vote share. Using K-means clustering, Principal Component Analysis (PCA), and regression modeling, we demonstrate that demographic age distributions significantly inform electoral outcomes. Our PCA-based regression model achieved an in-sample 
+𝑅2
+R 
+2
+  of approximately 0.85 and a cross-validated 
+𝑅
+2
+R 
+2
+  of about 0.49, clearly outperforming a simple mean predictor baseline.
+
+Introduction
+Problem Statement
+Accurately predicting Democratic turnout across Washington counties is critical for effective allocation of campaign resources and targeted voter outreach strategies.
+
+Audience and Value Proposition
+This analysis specifically benefits Dr. Kim Schrier’s campaign field team. By identifying key demographic predictors and clustering counties based on voter profiles, campaign strategists can efficiently allocate resources to regions with the highest potential impact.
+
+Report Organization
+This report covers data preprocessing, exploratory analysis, feature engineering, clustering and PCA analysis, regression modeling and evaluation, and strategic implications for campaign decision-making.
+
+Data Sources & Preprocessing
+Election Results
+We used official Washington State election data from 2022 and early returns from 2024, containing county-level total votes and Democratic vote shares.
+
+Demographic Data
+Demographic data from the Washington Office of Financial Management (OFM) provided detailed county-level population breakdowns across multiple age brackets, gender, and racial categories from 2020-2024.
+
+Data Cleaning and Quality Checks
+We conducted rigorous quality checks, revealing no significant missing data points across our dataset. All 39 counties provided complete demographic and electoral information.
+
+Exploratory Data Analysis (EDA)
+Missingness Overview
+Our dataset exhibited zero percent missingness across all 260 variables, ensuring robust analyses without the need for imputation.
+
+Age-Band Distributions
+Histograms of age-band proportions demonstrated significant variance across counties, particularly notable in groups such as 18–24 and 65+, indicating diverse demographic landscapes across counties.
+
+Feature Correlations
+A correlation heatmap revealed strong inter-correlations among certain age groups, informing our choice of dimensionality reduction methods such as PCA to handle multicollinearity effectively.
+
+Feature Engineering
+Age-Band Proportions
+We engineered key demographic features by calculating the proportion of each age group relative to county total populations. This resulted in meaningful, interpretable features such as percentage of the population aged 18–24, 25–34, etc.
+
+Rationale
+Age demographics are powerful indicators of political participation and partisan preferences, crucial for predicting voter turnout and preferences at the county level.
+
+Unsupervised Learning: Clustering & PCA
+K-Means Clustering
+We employed k-means clustering with an optimal solution of 5 clusters (selected via elbow plot analysis). Clustering revealed distinct demographic profiles across clusters, with notable differences in Democratic vote share (boxplots showed clear cluster differentiation).
+
+Principal Component Analysis (PCA)
+PCA substantially reduced feature complexity, with the first two principal components explaining approximately 90% of total variance. A PCA biplot confirmed clear separation among clusters.
+
+Interpretation
+Cluster 1: Young demographic counties with high proportions of voters aged 18–24.
+
+Cluster 3: Older populations dominated by voters aged 65+, typically exhibiting lower Democratic turnout.
+
+PC Interpretation: PC1 primarily captured variations associated with younger age brackets, while PC2 correlated strongly with mid-aged voter groups (30–44).
+
+Supervised Learning: Regression & Evaluation
+Baseline Model
+A simple baseline (mean Democratic share) yielded an R² of 0.00 and an RMSE of approximately 0.16, indicating minimal predictive power.
+
+PCA-based Regression (In-Sample)
+Using PC1 and PC2 as predictors, our regression model achieved an impressive R² of around 0.85, significantly reducing prediction error compared to the baseline, with an RMSE around 0.06.
+
+Cross-Validation
+Five-fold cross-validation provided a robust assessment of generalization, achieving a mean cross-validated R² of approximately 0.49 and an RMSE of about 0.12, affirming good model performance beyond training data.
+
+Comparative Analysis
+The PCA-based regression model clearly outperformed the trivial baseline predictor, validating the effectiveness and added predictive value of demographic-derived features.
+
+Discussion & Campaign Implications
+Cluster-Driven Strategy
+Clusters revealed strategic insights:
+
+Counties in Cluster 1 (young voters) and Cluster 4 (middle-aged demographics) consistently demonstrated higher Democratic turnout, suggesting tailored youth-focused and family-oriented messaging.
+
+Cluster 3 (older voters) might require different engagement strategies or lower resource investment due to consistently lower Democratic turnout.
+
+PC Insights
+The prominence of PC1 highlights younger voter engagement as a significant predictor of Democratic turnout, suggesting targeted outreach strategies such as digital campaigning and student voter mobilization initiatives.
+
+Actionable Recommendations
+Prioritize resources for clusters demonstrating historically high or growing Democratic shares.
+
+Invest heavily in digital and youth-focused outreach in counties scoring high on PC1.
+
+Limitations & Future Work
+Geographic Granularity
+County-level granularity masks within-county variation. Future analyses should leverage precinct-level data.
+
+Redistricting Effects
+District boundary adjustments after 2020 introduce complexities not fully captured at the county level, warranting additional geographic data integration.
+
+Additional Data Needs
+Incorporating voter file data or field outreach metrics would further enhance predictive accuracy and actionability.
+
+Alternative Methods
+Future work could explore Gaussian Mixture Models or hierarchical clustering to capture more complex demographic patterns, and use SHAP values to further interpret predictive importance.
+
+Conclusion
+This analysis demonstrates that demographic features, especially age-group proportions, substantially inform predictions of Democratic vote share across Washington counties. Utilizing unsupervised clustering, PCA, and supervised regression modeling, we provided actionable insights for campaign resource allocation. While highly predictive, further refinements through finer geographic data and additional voter-level information promise even greater precision and impact.
 
