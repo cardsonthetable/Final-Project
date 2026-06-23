@@ -13,4 +13,8 @@ I use county-level demographic and electoral data to cluster Washington counties
 - **Audience:** Field organizers and data team for the Washington State Democratic Party
 
 
+Washington State Democratic Turnout: Machine Learning Analysis
+
+Abstract
 This project analyzes county-level demographic and electoral data from Washington State to predict Democratic vote share. Using K-means clustering, Principal Component Analysis (PCA), and regression modeling, I demonstrate that demographic age distributions significantly inform electoral outcomes. The PCA-based regression model achieved an in-sample R^2 of approximately 0.85 and a cross-validated R^2 of about 0.49, clearly outperforming a simple mean predictor baseline.
+<img width="468" height="210" alt="image" src="https://github.com/user-attachments/assets/ec392fee-82c7-4866-962e-0fe38f0a36dc" />
